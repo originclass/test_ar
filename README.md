@@ -14,9 +14,20 @@ patrol-ar/
 └── docs/      # 搭建文档 / 演示脚本 / AI 使用记录
 ```
 
-## 快速启动(待补充)
+## 快速启动(后端)
 
-> 各部分详细启动方式将在实现完成后补充于此。
+```powershell
+cd backend
+go build -o patrol-api.exe .      # 首次编译
+.\patrol-api.exe                  # 默认监听 :8080,数据库连接见 store.go / PATROL_DB_DSN 环境变量
+```
+
+- 状态检查:`GET http://localhost:8080/health`
+- 上报问题(Unity):`POST /api/issues`
+- 问题列表:`GET /api/issues`
+- 修改状态(React):`PATCH /api/issues/{id}/status`,body:`{"status":"open|in_progress|resolved"}`
+
+统一响应格式:`{"code":0,"msg":"ok","data":...}`,业务失败 code 非 0 并配合 HTTP 400/404/500。
 
 ## 技术栈
 
@@ -28,8 +39,8 @@ patrol-ar/
 
 ## 当前进度
 
-- [ ] 第 0 步:项目初始化
-- [ ] 第 1 步:Go 后端
+- [x] 第 0 步:项目初始化
+- [x] 第 1 步:Go 后端
 - [ ] 第 2 步:React 管理端
 - [ ] 第 3 步:Unity AR 端
 - [ ] 第 4 步:三端联调
