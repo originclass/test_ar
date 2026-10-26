@@ -1,0 +1,40 @@
+# ===== Go backend =====
+backend/patrol-api
+backend/patrol-api.exe
+backend/*.exe
+backend/out/
+
+# ===== Node / React =====
+web/node_modules/
+web/dist/
+web/*.local
+web/npm-debug.log*
+
+# ===== Unity (generated) =====
+unity/[Ll]ibrary/
+unity/[Tt]emp/
+unity/[Oo]bj/
+unity/[Bb]uild/
+unity/[Bb]uilds/
+unity/[Ll]ogs/
+unity/[Uu]serSettings/
+unity/MemoryCaptures/
+unity/*.csproj
+unity/*.sln
+unity/*.suo
+unity/*.user
+unity/*.userprefs
+unity/.vs/
+unity/.idea/
+unity/Build/
+
+# ===== OS / IDE =====
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# ===== Local runtime data =====
+*.local
+.env
+.env.local
