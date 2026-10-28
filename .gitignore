@@ -8,6 +8,7 @@
 [Ll]ogs/
 [Uu]serSettings/
 MemoryCaptures/
+.utmp/
 *.csproj
 *.sln
 *.slnx
