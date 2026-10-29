@@ -129,4 +129,4 @@ cd web && npm install && npm run dev
 
 ## 实现过程
 
-见 [docs/AI_LOG.md](docs/AI_LOG.md)(任务拆解、架构决策、8 项踩坑记录、验收记录)。
+见 [AI_LOG.md](AI_LOG.md)(20 条人工指令原文记录、任务拆解、8 项踩坑、验收记录)。
