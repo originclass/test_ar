@@ -8,6 +8,76 @@
 | 说明 | 带 ※ 的 Prompt 原文为按会话记录还原(早期对话轮次被上下文压缩),其余为逐字原文 |
 
 ---
+## P-000.1
+
+- 目标:本地创建数据库，工供项目使用
+
+### Prompt 原文
+
+> ※ 给我在我电脑的pgsql里面建一个数据库叫go-admin，有什么问题直接问我，我的数据库密码是123456，用户名是postgres
+
+### 结果
+- 数据库 go-admin 已创建，编码 UTF8
+- PostgreSQL 版本：18.6,x64 Windows
+- 已验证可正常连接
+
+---
+## P-000.2
+
+- 目标:拉取二开框架项目源码
+
+### Prompt 原文
+
+> ※ https://github.com/bitxx/go-admin这个项目用git拉取下来到bitxx-go-admin里面，遇到问题直接问我
+
+### 结果
+- 分支：master,最新提交:ce17ea9 Merge branch 'dev'
+- 位置:D:\bitxx-go-admin
+
+## P-000.3
+
+- 目标:执行项目里的sql脚本
+
+### Prompt 原文
+
+> ※ app_pgsql.sql脚本在建的数据库里面执行一下
+
+### 结果
+- 建表数据添加成功
+
+
+## P-000.4
+
+- 目标:根据项目的文档，启动后端
+
+### Prompt 原文
+
+> ※ <项目启动提示> 以上是该项目的启动方式，请启动后端
+### 过程中解决的三个坑(记下来以后有用)：
+
+- 生成的代码在 Windows 下非法:go generate 把路径写成 go-admin\app\...(反斜杠进了 Go 字符串)，已把 572 处 \ 修正为 /
+- ⚠️ 文档里 -c=config/settings.dev.yml 的写法有 bug:这版 cobra 解析 -c=x 时路径会被截断成 config/settings,必须用空格分隔:-c config/settings.dev.yml
+- 沙箱限制 Go 写 C:\Users\zaq\go 和 go env -w,所以 go generate 里的两条 go env -w 跳过了(已用环境变量 GOPROXY/GOPATH/GOCACHE 等效替代)
+### 结果
+- 后端启动成功
+
+## P-000.5
+
+- 目标:启动前端
+
+### Prompt 原文
+
+> ※ 准备启动前端
+### 过程中解决的坑(记下来以后有用)：
+
+- pnpm 12 崩溃(thread has overflowed its stack)—— Windows 上的已知问题，改用 npm
+- npm 严格 peer 依赖冲突 —— 老项目标配，加 --legacy-peer-deps
+- postinstall 脚本 EPERM —— 沙箱禁止子进程管道，用 --ignore-scripts 跳过(Vite 6 的 esbuild 二进制通过平台包分发，不依赖脚本)
+- esbuild 报 "debugger" 非法标识符 —— vite.config.ts 把 "debugger" 关键字放进了 pure 选项，新版 esbuild 不允许。已通过在 .env.development
+- 里加 VITE_DROP_CONSOLE = false 修复(开发环境保留 console/debugger 反而更利于调试)
+.env 热重启不生效 —— 该项目的 getEnv.ts 会把环境变量写进 process.env,Vite 热重启时进程内旧值优先于文件，必须整个进程重启
+### 结果
+- 前端启动成功
 
 ## P-001
 
@@ -15,54 +85,125 @@
 
 ### Prompt 原文
 
-> ※ 这是评审题目(原文见 SESSION_NOTES.md):Unity AR 放置标记并上报 → Go 后端保存 → React 页面查看问题 → React 修改处理状态(open/in_progress/resolved)。数据结构固定 {id, title, description, priority(low/medium/high), status, position{x,y,z}, createdAt, updatedAt},camelCase JSON。我们一步一步来,每一步停下来等我确认。
+> ※ 这是评审题目....:Unity AR 放置标记并上报 → Go 后端处理业务逻辑 → React 页面查看问题 → React 修改处理状态(open/in_progress/resolved)。数据结构固定 {id, title, description, priority(low/medium/high), status, position{x,y,z}, createdAt, updatedAt},camelCase JSON。我们一步一步来先从写后端业务接口开始,然后搭建前端页面，最后做unity客户端，这是大体的，一个个分步解决，每次做完停下来等我确认。
 
 ### 结果
 
 - 采用
 - 后续每步均先确认再推进;题目要求的数据结构成为三端统一契约,最终真机验收通过
 
-## P-002
+## P-001.1
 
-- 目标:确定项目架构(独立项目 vs 复用现有框架)
+- 目标:先把本地的unity项目的代码库建立起来
 
 ### Prompt 原文
 
-> ※ 不做独立项目,后端复用我现成的 go-admin 项目(D:\bitxx-go-admin):在它的 /app 下建 patrol 模块,前端页面放它的 web 里;D:\patrol-ar 只放 Unity 工程。
+> ※初始化建立unity的本地项目文件夹，git init.，关联我的项目仓库....编写必要的README.md,等等
 
 ### 结果
 
-- 修改后采用
-- 已按独立三目录做完 Go 后端与 React 管理端两个 commit,接此指令后迁移为 go-admin 集成方案,原实现降级为参考代码
-- 验证:patrol 模块编译通过;curl 直测上报/列表/改状态接口 4 个分支全对(含 31000/31001 错误码)
+- 首次提交在本地，还没有 push 到 GitHub —— 等项目有实质内容后(比如第 1 步后端完成)再一起推，避免空仓库推来推去；推送时如果弹出 GitHub 登录授权，按提示操作即可。
+- 你机器上现在有两个库:go-admin(之前的项目)和 patrol_ar(本次巡检项目)，互不干扰。
+
+
+## P-001.2
+
+- 目标:编写后端代码
+
+### Prompt 原文
+
+> ※ 开始写后端代码
+
+### 结果
+- 后端代码写完
+
+
+## P-001.3
+
+- 目标:编写前端代码
+
+### Prompt 原文
+
+> ※ 开始写前端代码
+
+### 结果
+- 钱端代码写完，前后端接口打通联调成功
+
+## P-001.3
+
+- 目标:重改项目结构
+
+### Prompt 原文
+
+> ※ 你为什么不在D:\bitxx-go-admin\web这个前端项目里面完成这个第2步前端需求？而是新启动一个项目，还有你后端是使用的是拉取的后端项目做基于她做二次开发的吗
+
+### 结果
+- agent向我确认信息
+
+
+## P-001.3
+
+- 目标:提供信息
+
+### Prompt 原文
+
+> ※ 我觉得你应该在后端单独建一个模块，用于实现本次的所有业务功能，也就是需要的各种后端接口后端就在/app/下面建一个模块就是，然后就是各层，就是各种增删改查接口，然后前端在之前启动的teact项目里，有页面，api对接后端返回的问题列表信息，根据问题 ID 修改处理状态（就是每个问题的状态可被更新，调用后端接口更新数据库数据），还有几个接口是用于客户端的，比如（2. 接收并保存客户端 上报的问题；也就是往失数据库插入数据，为新问题生成唯一 ID，默认状态为 open，客户端提交问题时候6. 标题为空或枚举值错误时，返回明确的参数错误；）对吧，这些后端接口就是增删改查，前端有一个页面，有接口请求响应后端，D:\bitxx-go-admin\web\src\api\app放新模块的前端接口，D:\bitxx-go-admin\web\src\views\app接受后端数据展示并且可以修改问题的状态就是
+### 结果
+- 修改项目结构，成功迁移业务代码，后端接口跳通
+
+
+## P-002
+
+- 目标:修改前端出现的页面没有显示问题
+
+### Prompt 原文
+
+> ※ 我没有在前端页面看到问题这个功能的页面啊，你的前端页面写了吗，前后端接口联调了嘛
+
+### 结果
+页面写了、接口也联调验证过了 —— 问题很可能出在菜单是登录时一次性拉取并缓存在本地的：你当前这个登录会话是在我插入菜单数据之前建立的，所以侧边栏里没有新菜单。我先验证这个推断，查一下前端菜单的加载与缓存机制：
+
+
+找到了。LoginForm.tsx 第 53 行：菜单树是登录那一刻拉取并存进 redux 的(getMenuRoleApi → setRouteList),你当前会话建立于我插菜单数据之前，所以侧边栏没有。确认一下 GetMenuRole 的角色过滤逻辑，排除其他可能：
+
+
+原因确认了，页面写了、接口也联调通过，你没看到菜单的原因是：菜单数据是登录那一刻从后端拉取并缓存在前端的(LoginForm.tsx 登录成功后调 getMenuRoleApi 存入 redux),而你的这个登录会话建立在我插入菜单数据之前 —— 后端当时的菜单树里自然没有“巡检问题”。
+
+后端代码我核实过：admin 角色的菜单是每次登录实时查库返回的(不走服务端缓存)，所以解决方式非常简单：
 
 ## P-003
 
-- 目标:搭建后端巡检模块
+- 目标:修改前端
 
 ### Prompt 原文
 
-> ※ 按 go-admin 四层结构(models/dto/service/apis/router)做 patrol 模块:免登录上报接口给 Unity 用,列表/详情/改状态/新增/删除走认证;错误码 31000 起;表 app_patrol_issue 建在 go-admin 库。
+> ※ 我点击巡检管理直接没有任何页面，为什么呢
 
 ### 结果
+我逐层核实了一遍，页面代码、菜单数据、接口全链路都是好的：
 
-- 采用
-- 验证:gin 启动日志可见全部 patrol 路由注册;curl 上报成功返回自增 ID;管理接口无 token 返回 401
-
+检查项	结果
+菜单树(后端实时查询)	✅ App应用 → 巡检管理(135) → 巡检问题(136) 结构正确，排序正确，admin 全量可见
+页面组件文件与路径映射	✅ 菜单 element=/app/patrol/patrol-issue/index → /src/views/app/patrol/patrol-issue/index.tsx 精确对应，与能正常打开的“用户等级”页面机制完全一致
+页面所有 import(动态图标/分页配置/message/modal/工具函数)	✅ 逐个核对了真实导出，无缺失
+Vite 编译	✅ 页面、弹窗、API 三个模块编译均 200 无错误
+后端接口	✅ 上报/校验/鉴权四分支此前已实测通过
+找到的问题： Vite 的路由表(import.meta.glob)是在 dev server 启动那一刻扫描的 —— 我的服务器是在写完页面文件之前启动的，运行中扫不到“后创建的文件”，所以菜单点了路由却找不到组件 → 空白。前端已经用新路由表重启完毕(http://localhost:1688)。
 ## P-004
 
-- 目标:前端巡检问题页面接入菜单
+- 目标:继续排查前端问题
 
 ### Prompt 原文
 
-> ※ 在 go-admin 的 web 里做巡检问题页面(列表/筛选/状态下拉修改/新增/删除),加菜单和按钮权限,admin 和 test 角色都能用。
+> ※ 给出浏览器的报错信息
 
 ### 结果
+根因已修复。 你控制台里那行致命报错
 
-- 修改后采用
-- 首次验收发现菜单点击白屏:AI 排查出菜单 icon 为空串导致 React createElement(undefined) 崩溃,修 DB 后重新登录验收通过
-- 验证:浏览器登录 → 巡检问题页列表渲染、状态下拉保存成功、刷新数据仍在
-
+代码块
+React.createElement: type is invalid ... got: undefined
+  at LayoutMenu (Menu/index.tsx)
+正是侧边栏在渲染菜单图标时炸的：框架对每个菜单项无条件执行 addIcon(item.icon),而我插入“巡检问题”(菜单 136)时图标留了空字符串 → createElement(undefined) → React 整树崩溃，表现就是点击后白屏/无页面。(其他几条只是框架原有的废弃 API 警告，与本次无关。)
 ## P-005
 
 - 目标:明确 Unity AR 客户端需求
@@ -118,7 +259,8 @@
 - 采用
 - Player → Minimum API Level 改 Android 9.0(API 29)
 - 验证:APK 构建成功
-
+### 中间跟着agent给出的教程在unity搭建场景，配置AR相关模块，打包构建apk的步骤省略，这些均为手动操作
+### 以下都是跟AI询问，apk打开黑屏，没有相机，没有标记区域，点击标记区域不出现自己写的UI的，表单数据无法上传，接口不通，采用手机无线调试根据日志排查问题，都在agent指导下给出解决方案，最终完成功能模块，对话轮数较多，不一一展示了。
 ## P-009
 
 - 目标:排查真机 APP 打开黑屏(第 1 版 APK)
@@ -272,16 +414,3 @@
 - 未采用(首次交付范围)→ 修改后重新交付
 - AI 首次只提交了"新增模块代码",被否定;随后把 go-admin 框架完整源码(前后端,排除 node_modules/exe/缓存)并入仓库,删除冗余集成目录,补 db_schema.sql 与菜单 SQL 到工程根,加 PROJECT_NOTES.md 运行说明,README 同步
 - 验证:471 文件入库并推送;核对仓库含 app/app/patrol 全部四层、web 巡检页面、两份 SQL;Unity 工程确认此前已完整(Assets/Packages/ProjectSettings,Library 为可重建缓存属标准排除)
-
-## P-020
-
-- 目标:按评审要求重做 AI 使用日志并提交
-
-### Prompt 原文
-
-> 请在项目根目录提交 AI_LOG.md,按实际顺序保存本题中所有由你主动发给 AI 的问题或指令,包括追问和纠错。每条记录使用以下简化格式即可:## P-00N / 目标 / Prompt 原文 / 结果(采用或修改后采用或未采用 + 如何验证)。要求:必须保留 Prompt 原文,不能只写总结;不需要记录 IDE 的逐字自动补全;至少记录一次你检查、修改或放弃 AI 结果的过程。
-
-### 结果
-
-- 采用(本文件即产物)
-- 验证:仓库根 AI_LOG.md 按时间序 20 条,原文保留(含错别字),含多处检查/修改/放弃 AI 结果的记录(P-004、P-007、P-010、P-013、P-015、P-016、P-019)
