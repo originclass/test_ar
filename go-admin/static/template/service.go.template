@@ -1,0 +1,219 @@
+package service
+
+import (
+	"errors"
+	"fmt"
+	"github.com/xuri/excelize/v2"
+	baseLang "go-admin/config/base/lang"
+	adminService "go-admin/app/admin/sys/service"
+	"go-admin/app/{{.PackageName}}/{{.BusinessName}}/models"
+	"go-admin/app/{{.PackageName}}/{{.BusinessName}}/service/dto"
+	"go-admin/core/middleware"
+	"go-admin/core/dto/service"
+	cDto "go-admin/core/dto"
+	"go-admin/core/global"
+	{{- $hasDecimal := false }}
+	{{- range .SysGenColumns }}
+    {{- if eq .GoType "decimal.Decimal"}}{{- $hasDecimal = true }}{{- end }}
+	{{- end }}
+	{{- if eq $hasDecimal true }}
+    "github.com/shopspring/decimal"
+	{{- end }}
+	"go-admin/core/lang"
+	"gorm.io/gorm"
+	"time"
+)
+
+type {{.ClassName}} struct {
+	service.Service
+}
+
+// New{{.ClassName}}Service {{.PackageName}}-实例化{{.TableComment}}
+func New{{.ClassName}}Service(s *service.Service) *{{.ClassName}} {
+	var srv = new({{.ClassName}})
+	srv.Orm = s.Orm
+	srv.Log = s.Log
+	return srv
+}
+
+// GetPage {{.PackageName}}-获取{{.TableComment}}分页列表
+func (e *{{.ClassName}}) GetPage(c *dto.{{.ClassName}}QueryReq, p *middleware.DataPermission) ([]models.{{.ClassName}}, int64, int, error) {
+	var data models.{{.ClassName}}
+    var list []models.{{.ClassName}}
+    var count int64
+
+	err := e.Orm.Order("created_at desc").Model(&data).
+		Scopes(
+			cDto.MakeCondition(c.GetNeedSearch()),
+			cDto.Paginate(c.GetPageSize(), c.GetPageIndex()),
+			middleware.Permission(data.TableName(), p),
+		).Find(&list).Limit(-1).Offset(-1).Count(&count).Error
+	if err != nil {
+		return nil, 0, baseLang.DataQueryLogCode, lang.MsgLogErrf(e.Log, e.Lang, baseLang.DataQueryCode, baseLang.DataQueryLogCode, err)
+	}
+	return list, count, baseLang.SuccessCode, nil
+}
+
+// Get {{.PackageName}}-获取{{.TableComment}}详情
+func (e *{{.ClassName}}) Get(id int64, p *middleware.DataPermission) (*models.{{.ClassName}}, int, error) {
+	if id <= 0 {
+		return nil, baseLang.ParamErrCode, lang.MsgErr(baseLang.ParamErrCode, e.Lang)
+	}
+	data := &models.{{.ClassName}}{}
+    err := e.Orm.Scopes(
+        middleware.Permission(data.TableName(), p),
+    ).First(data, id).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, baseLang.DataQueryLogCode, lang.MsgLogErrf(e.Log, e.Lang, baseLang.DataQueryCode, baseLang.DataQueryLogCode, err)
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, baseLang.DataNotFoundCode, lang.MsgErr(baseLang.DataNotFoundCode, e.Lang)
+	}
+	return data, baseLang.SuccessCode, nil
+}
+
+// QueryOne {{.PackageName}}-获取{{.TableComment}}一条记录
+func (e *{{.ClassName}}) QueryOne(queryCondition *dto.{{.ClassName}}QueryReq, p *middleware.DataPermission) (*models.{{.ClassName}}, int, error) {
+	data := &models.{{.ClassName}}{}
+	err := e.Orm.Scopes(
+		cDto.MakeCondition(queryCondition.GetNeedSearch()),
+		middleware.Permission(data.TableName(), p),
+	).First(data).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, baseLang.DataQueryLogCode, lang.MsgLogErrf(e.Log, e.Lang, baseLang.DataQueryCode, baseLang.DataQueryLogCode, err)
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, baseLang.DataNotFoundCode, lang.MsgErr(baseLang.DataNotFoundCode, e.Lang)
+	}
+	return data, baseLang.SuccessCode, nil
+}
+
+// Count {{.PackageName}}-获取{{.TableComment}}数据总数
+func (e *{{.ClassName}}) Count(queryCondition *dto.{{.ClassName}}QueryReq) (int64, int, error) {
+	var err error
+	var count int64
+	err = e.Orm.Model(&models.{{.ClassName}}{}).
+		Scopes(
+			cDto.MakeCondition(queryCondition.GetNeedSearch()),
+		).Limit(-1).Offset(-1).Count(&count).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return 0, baseLang.DataQueryLogCode, lang.MsgLogErrf(e.Log, e.Lang, baseLang.DataQueryCode, baseLang.DataQueryLogCode, err)
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return 0, baseLang.DataNotFoundCode, lang.MsgErr(baseLang.DataNotFoundCode, e.Lang)
+	}
+	return count, baseLang.SuccessCode, nil
+}
+
+// Insert {{.PackageName}}-新增{{.TableComment}}
+func (e *{{.ClassName}}) Insert(c *dto.{{.ClassName}}InsertReq) (int64, int, error) {
+	if c.CurrUserId <= 0 {
+		return 0, baseLang.ParamErrCode, lang.MsgErr(baseLang.ParamErrCode, e.Lang)
+	}
+	now := time.Now()
+	var data models.{{.ClassName}}
+	{{- range .SysGenColumns }}
+	{{- if ne .ColumnName "id" }}
+	{{- if eq .GoField "CreatedAt" }}
+    data.CreatedAt = &now
+    {{- else if eq .GoField "UpdatedAt" }}
+    data.UpdatedAt = &now
+    {{- else if eq .GoField "CreateBy" }}
+    data.CreateBy = c.CurrUserId
+    {{- else if eq .GoField "UpdateBy" }}
+    data.UpdateBy = c.CurrUserId
+    {{- else if eq .GoField "Status" }}
+    data.Status = global.SysStatusOk
+    {{- else if eq .IsRequired "1" }}
+    data.{{.GoField}} = c.{{.GoField}}
+	{{- end }}
+    {{- end }}
+    {{- end }}
+	err := e.Orm.Create(&data).Error
+	if err != nil {
+		return 0, baseLang.DataInsertLogCode, lang.MsgLogErrf(e.Log, e.Lang, baseLang.DataInsertCode, baseLang.DataInsertLogCode, err)
+	}
+	return data.Id, baseLang.SuccessCode, nil
+}
+
+// Update {{.PackageName}}-更新{{.TableComment}}
+func (e *{{.ClassName}}) Update(c *dto.{{.ClassName}}UpdateReq, p *middleware.DataPermission) (bool, int, error) {
+	if c.Id <= 0 || c.CurrUserId <= 0 {
+		return false, baseLang.ParamErrCode, lang.MsgErr(baseLang.ParamErrCode, e.Lang)
+	}
+	data, respCode, err := e.Get(c.Id, p)
+	if err != nil {
+		return false, respCode, err
+	}
+
+	//最小化变更改动过的数据
+	updates := map[string]interface{}{}
+	{{- range .SysGenColumns }}
+    {{- if eq .IsRequired "1" }}
+    {{- if eq .GoType "string" }}
+	if c.{{.GoField}} != "" && data.{{.GoField}} != c.{{.GoField}} {
+		updates["{{.ColumnName}}"] = c.{{.GoField}}
+	}
+    {{- end }}
+    {{- if or (eq .GoType "uint64") (eq .GoType "uint32") (eq .GoType "uint16") (eq .GoType "uint8") (eq .GoType "uint") (eq .GoType "int64") (eq .GoType "int32") (eq .GoType "int8") (eq .GoType "int") (eq .GoType "int32") (eq .GoType "float64") (eq .GoType "float") }}
+	if c.{{.GoField}} >= 0 && data.{{.GoField}} != c.{{.GoField}}{
+		updates["{{.ColumnName}}"] = c.{{.GoField}}
+	}
+    {{- end }}
+    {{- if or (eq .GoType "decimal.Decimal") }}
+	if c.{{.GoField}}.Cmp(decimal.Zero) >= 0 && data.{{.GoField}}.Cmp(c.{{.GoField}}) != 0 {
+		updates["{{.ColumnName}}"] = c.{{.GoField}}
+	}
+    {{- end }}
+    {{- end }}
+	{{- end }}
+	if len(updates)>0 {
+        updates["updated_at"] = time.Now()
+        updates["update_by"] = c.CurrUserId
+        err = e.Orm.Model(&data).Where("id=?",data.Id).Updates(&updates).Error
+		if err != nil {
+			return false, baseLang.DataUpdateLogCode, lang.MsgLogErrf(e.Log, e.Lang, baseLang.DataUpdateCode, baseLang.DataUpdateLogCode, err)
+		}
+		return true, baseLang.SuccessCode, nil
+	}
+	return false, baseLang.SuccessCode, nil
+}
+
+// Delete {{.PackageName}}-删除{{.TableComment}}
+func (e *{{.ClassName}}) Delete(ids []int64, p *middleware.DataPermission) (int, error) {
+	if len(ids) <= 0 {
+		return baseLang.ParamErrCode, lang.MsgErr(baseLang.ParamErrCode, e.Lang)
+	}
+	var data models.{{.ClassName}}
+	err := e.Orm.Scopes(
+		middleware.Permission(data.TableName(), p),
+	).Delete(&data, ids).Error
+	if err != nil {
+		return baseLang.DataDeleteLogCode, lang.MsgLogErrf(e.Log, e.Lang, baseLang.DataDeleteCode, baseLang.DataDeleteLogCode, err)
+	}
+	return baseLang.SuccessCode, nil
+}
+
+// Export {{.PackageName}}-导出{{.TableComment}} excel数据
+func (e *{{.ClassName}}) Export(list []models.{{.ClassName}}) ([]byte, error) {
+	sheetName := "{{.ClassName}}"
+	xlsx := excelize.NewFile()
+	defer xlsx.Close()
+	no, _ := xlsx.NewSheet(sheetName)
+	_ = xlsx.SetColWidth(sheetName, "A", "L", 25)
+	_ = xlsx.SetSheetRow(sheetName, "A1", &[]interface{}{
+		"编号", "状态"})
+	dictService := adminService.NewSysDictDataService(&e.Service)
+	for i, item := range list {
+		axis := fmt.Sprintf("A%d", i+2)
+		status := dictService.GetLabel("admin_sys_status", item.Status)
+
+		//按标签对应输入数据
+		_ = xlsx.SetSheetRow(sheetName, axis, &[]interface{}{
+		    item.Id,status,
+		})
+	}
+	xlsx.SetActiveSheet(no)
+	data, _ := xlsx.WriteToBuffer()
+	return data.Bytes(), nil
+}

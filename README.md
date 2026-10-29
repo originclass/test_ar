@@ -22,19 +22,22 @@ Unity AR(Android 真机)                Go 后端(go-admin 框架)            Re
 
 ## 交付内容
 
-本仓库包含**完整的 Unity AR 客户端工程**与**参考实现**(early prototype),业务后端与管理端集成在 [go-admin](https://github.com/go-admin-team/go-admin) 框架(集成代码副本见 `go-admin-integration/`):
+本仓库包含**可直接运行的完整代码**:Unity AR 客户端工程 + go-admin 框架完整源码(前后端,含巡检模块)+ 早期参考实现:
 
 ```
 patrol-ar/
-├── ar_poj/AR_prj/            # ★ Unity 6 AR 客户端工程(真机验证通过)
+├── ar_poj/AR_prj/            # ★ Unity 6 AR 客户端工程(完整工程,真机验证通过)
 │   ├── Assets/Scripts/       #    全部 C# 源码(3 个脚本,见下文)
 │   ├── Assets/Scenes/        #    SampleScene(AR Session + 平面检测 + UI)
 │   └── Assets/Settings/      #    URP 渲染配置(含 AR 渲染特性,见 AI_LOG 踩坑记录)
-├── go-admin-integration/     # ★ 集成到 go-admin 的全部新增代码(含目标路径说明)
+├── go-admin/                 # ★ go-admin 框架完整源码(前后端)+ 巡检模块(开箱即跑)
+│   ├── app/app/patrol/       #    后端巡检模块(models/dto/service/apis/router 四层)
+│   ├── web/                  #    React 管理端完整工程(含巡检问题页面)
+│   └── PROJECT_NOTES.md      #    本工程运行说明(数据库初始化/启动/Unity 对接)
 ├── unity/                    # Unity 保姆级搭建文档(SETUP_GUIDE.md)与脚本副本
 ├── backend/                  # 参考实现:独立 Go 后端(prototype)
 ├── web/                      # 参考实现:独立 React 管理端(prototype)
-├── docs/                     # 文档(搭建指南 / AI 协作日志)
+└── docs/                     # 文档(搭建指南 / AI 协作日志)
 ```
 
 ## Unity AR 客户端(`ar_poj/AR_prj`)
@@ -64,37 +67,39 @@ POST {host}:8888/admin-api/v1/app/patrol/issue/report
 - 唯一 ID、默认状态 `open`、时间戳全部由**后端**生成
 - 管理端同结构(camelCase),列表接口返回 `position` 嵌套对象
 
-## go-admin 集成(`go-admin-integration/`)
+## 后端 + 管理端(`go-admin/`,开箱即跑)
 
-业务代码按 go-admin 四层结构(模块:`patrol`)新增,不改动框架既有文件(仅注册路由与菜单 SQL 两处挂载点)。文件清单与集成目标路径:
-
-| 本仓库文件 | 集成目标路径 | 说明 |
-|---|---|---|
-| `app/app/patrol/models/patrol_issue.go` | `app/app/patrol/models/` | gorm model:嵌套 `position` 对象 ↔ `pos_x/y/z` 三列转换;枚举常量与校验 |
-| `app/app/patrol/service/dto/patrol_issue.go` | `app/app/patrol/service/dto/` | 请求 DTO:分页查询(search 标签)/ 上报 / 状态更新 |
-| `app/app/patrol/service/patrol_issue.go` | `app/app/patrol/service/` | 业务:Insert(标题/优先级校验、状态强制 open)、UpdateStatus(枚举校验)、GetPage/Get/Delete |
-| `app/app/patrol/apis/patrol_issue.go` | `app/app/patrol/apis/` | gin 处理器(框架标准链式调用) |
-| `app/app/patrol/router/*.go` | `app/app/patrol/router/` | 免认证组(`POST /app/patrol/issue/report`,供 Unity 上报)+ JWT+casbin 认证组(管理端) |
-| `config/base/lang/patrol.go` | `config/base/lang/` | 业务错误码 31000-31004 注册 |
-| `init.go.patch` | `app/app/init.go` | 模块路由注册(一处 append) |
-| `patrol_menu_init.sql` | (psql 执行) | 菜单/按钮权限/admin+test 角色授权/casbin 规则 |
-| `db_schema.sql` | (psql 执行) | `app_patrol_issue` 表结构 |
-
-### 快速启动(go-admin 后端 + React 管理端)
+完整 go-admin 工程(框架源码 + 巡检模块已就位),运行步骤详见 [`go-admin/PROJECT_NOTES.md`](go-admin/PROJECT_NOTES.md),概要:
 
 ```powershell
-# 1. 数据库(PostgreSQL,库名 go-admin)
-psql -U postgres -d go-admin -f go-admin-integration/db_schema.sql
-psql -U postgres -d go-admin -f go-admin-integration/patrol_menu_init.sql
+# 1. 数据库(PostgreSQL,库名 go-admin;先导入框架的 app_pgsql.sql 基础表)
+psql -U postgres -d go-admin -f go-admin/db_schema.sql          # 巡检问题表
+psql -U postgres -d go-admin -f go-admin/patrol_menu_init.sql   # 菜单 + 角色授权 + casbin
 
-# 2. 后端(go-admin 框架,把 go-admin-integration/ 下文件按上表拷入框架源码)
+# 2. 后端 :8888
+cd go-admin
 go build -o go-admin-api.exe main.go
-.\go-admin-api.exe server --config config/settings.dev.yml     # :8888
+.\go-admin-api.exe server --config config/settings.dev.yml
 
-# 3. 管理端
+# 3. 管理端 :1688
 cd web && npm install && npm run dev
-# 登录 admin → 菜单「App应用 → 巡检管理 → 巡检问题」
+# 登录 admin/123456 → 菜单「App应用 → 巡检管理 → 巡检问题」
 ```
+
+本项目在框架中新增的业务代码(其余均为框架本体):
+
+| 路径 | 说明 |
+|---|---|
+| `app/app/patrol/models/patrol_issue.go` | gorm model:嵌套 `position` 对象 ↔ `pos_x/y/z` 三列转换;枚举常量与校验 |
+| `app/app/patrol/service/dto/patrol_issue.go` | 请求 DTO:分页查询(search 标签)/ 上报 / 状态更新 |
+| `app/app/patrol/service/patrol_issue.go` | 业务:Insert(标题/优先级校验、状态强制 open)、UpdateStatus(枚举校验)、GetPage/Get/Delete |
+| `app/app/patrol/apis/patrol_issue.go` | gin 处理器(框架标准链式调用) |
+| `app/app/patrol/router/*.go` | 免认证组(`POST /app/patrol/issue/report`,供 Unity 上报)+ JWT+casbin 认证组(管理端) |
+| `config/base/lang/patrol.go` | 业务错误码 31000-31004 注册 |
+| `web/src/api/app/patrol/patrol-issue/index.ts` | 前端 API 客户端 |
+| `web/src/views/app/patrol/patrol-issue/` | 前端页面(列表/状态修改/新增/删除) |
+| `patrol_menu_init.sql` | 菜单/按钮权限/admin+test 角色授权/casbin 规则 |
+| `db_schema.sql` | `app_patrol_issue` 表结构 |
 
 接口全景(题目 3.3 全覆盖):
 
